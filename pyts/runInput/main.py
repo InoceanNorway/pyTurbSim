@@ -149,5 +149,6 @@ def cfg2tsrun(tsinput):
 
     # Store this for use when writing sum files.
     tsr._config = tsinput
+    tsr._config = tsinput
 
     return tsr

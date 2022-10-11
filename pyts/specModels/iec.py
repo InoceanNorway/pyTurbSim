@@ -169,6 +169,8 @@ class iecbase(specModelBase):
                  \sigma = 0.11 V_{ref}
         """
         iecver = self.IECstandard
+        wndtp = self.IECwindtype.lower()
+
         if self.IECturbc.__class__ is str:
             # !!!VERSION_INCONSISTENCY: add 'khtest' functionality.
             val = self.IECturbc.lower()
@@ -292,7 +294,10 @@ class IECKai(iecbase):
         """
         self._check_ewm(tsrun.grid)
         out = specObj(tsrun)
-        sig2 = 4 * self.IEC_Sigma(tsrun.prof.uhub) ** 2
+        try:
+            sig2 = 4 * self.IEC_Sigma(tsrun.prof.uhub) ** 2
+        except :
+            sig2 = 4 * self.IECturbc ** 2
         fctr = np.array([1, 0.64, 0.25], dtype=ts_float)
         L_u = self.Lambda(tsrun.grid.zhub) / tsrun.prof.uhub * \
             np.array([8.10, 2.70, 0.66], dtype=ts_float)

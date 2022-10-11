@@ -82,6 +82,7 @@ class tsrun(object):
             self.RandSeed = random.randint(-2147483647, 2147483647)
         else:
             self.RandSeed = RandSeed
+        self.ews_update=False
         # Seeds for numpy must be positive, but original-TurbSim had
         # negative seeds.  In order to attempt to be consistent, we
         # use the values in the files but make them positive for the
@@ -285,9 +286,9 @@ class tsrun(object):
                ts_run.cohere=a_numpy_array  - [units: non-dimensional]
 
            In this case the coherence will be fixed and defined by
-           this input array.  The numpy array dimensions must match
+           this input array.  Th e numpy array dimensions must match
            those of the gridObj.  That is, the dimensions of the
-           array should be (3 x grid.n_p x grid.n_p x grid.n_f).
+           array should be (3 x grid.n_p x grid.n_p xgrid.n_f).
            The first dimension is for each component of the spectrum
            (u,v,w), the next two are for each point-pair (z,y) in the
            grid, and the last dimension is the frequency dependence
@@ -595,10 +596,10 @@ class tsdata(gridProps):
         out['z_wstd'] = np.concatenate((self.grid.z[:, None], self.uturb[2].std(-1)), axis=1)
         u, v, w = self.uprof.mean(-1)[:, :, None]
         out['WINDSPEEDPROFILE'] = np.concatenate((
-            self.grid.z[:, None],
-            np.sqrt(u ** 2 + v ** 2),
-            np.angle(u + 1j * v) * 180 / np.pi,
-            u, v, w, ), axis=1)
+            self.grid.z[:],
+            np.sqrt(u[0,:][0] ** 2 + v[0,:][0] ** 2),
+            np.angle(u[0,:][0] + 1j * v[0,:][0]) * 180 / np.pi,
+            u[0,:][0], v[0,:][0], w[0,:][0], ))
         out['HFlowAng'] = np.angle(self.uprof[0][self.ihub] + 1j * self.uprof[1][self.ihub])
         out['VFlowAng'] = np.angle(self.uprof[0][self.ihub] + 1j * self.uprof[2][self.ihub])
         out['TurbModel'] = self.info['specModel']['name']
@@ -643,7 +644,7 @@ class tsdata(gridProps):
         Initialize a tsdata object with a grid object.
         """
         self.grid = grid
-
+        self.ews_update=False
     @property
     def shape(self,):
         """
@@ -677,19 +678,56 @@ class tsdata(gridProps):
                  self.grid.n_z,
                  self.grid.n_y,
                  self.grid.zhub))
+    def ews(self):
+        self.ews_update=True
+        self.uprof = np.zeros([3] + list(self.grid.shape) + [self.uturb.shape[-1]])
+        import numpy as npp
+        positive_shear = True
+        negative_shear = False
+        for i in range(self.uturb.shape[-1]):
+            T = 12
+            D = 236
+            t = i * self.dt
+            if 0 < t and t < T:
+                sig1 = self.info["config"]["IECturbc"]/100 * (0.75 * self.info["profModel"]["params"]["Uref"] + 5.6)
+                if positive_shear:
+                    liste = self.info["profModel"]["params"]["Uref"] * (
+                                self.grid.z / self.info["profModel"]["params"]["Zref"]) ** \
+                           self.info["profModel"]["params"]["PLexp"] + (
+                                       (self.grid.z - self.info["profModel"]["params"]["Zref"]) / D) * (
+                                       2.5 + 0.2 * 6.4 * sig1 * (D / 42) ** 0.25) * (1 - npp.cos(2 * npp.pi * t / T))
+                if negative_shear:
+                    liste = self.info["profModel"]["params"]["Uref"] * (
+                                self.grid.z / self.info["profModel"]["params"]["Zref"]) ** \
+                           self.info["profModel"]["params"]["PLexp"] - (
+                                       (self.grid.z - self.info["profModel"]["params"]["Zref"]) / D) * (
+                                       2.5 + 0.2 * 6.4 * sig1 * (D / 42) ** 0.25) * (1 - npp.cos(2 * npp.pi * t / T))
+            else:
+                liste = self.info["profModel"]["params"]["Uref"] * (
+                        self.grid.z / self.info["profModel"]["params"]["Zref"]) ** self.info["profModel"]["params"][
+                           "PLexp"]
+            for k in range(self.grid.n_y):
+                self.uprof[0, :, k, i] = liste
+
+
 
     @property
     def utotal(self,):
         """
         The total (mean + turbulent), 3-d velocity array
         """
-        return self.uturb + self.uprof[:, :, :, None]
+        if self.ews_update==False:
+            self.ews()
+
+        return self.uturb + self.uprof#[:, :, :, None]
 
     @property
     def u(self,):
         """
         The total (mean + turbulent), u-component of velocity.
         """
+        if self.ews_update==False:
+            self.ews()
         return self.uturb[0] + self.uprof[0, :, :, None]
 
     @property
@@ -711,7 +749,9 @@ class tsdata(gridProps):
         """
         The hub-height mean velocity.
         """
-        return self.uprof[0][self.ihub]
+        if self.ews_update==False:
+            self.ews()
+        return self.uprof[0][self.ihub][0]
 
     @property
     def uhub(self,):

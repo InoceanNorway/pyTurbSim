@@ -12,7 +12,7 @@ import time
 if len(sys.argv) > 1:
     fname = sys.argv[1]
 else:
-    fname = 'HydroTurbSim.inp'
+    fname = 'Turbsim.inp'
 
 config = readInput(fname)
 
