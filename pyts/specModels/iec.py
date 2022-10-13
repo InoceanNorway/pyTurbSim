@@ -78,7 +78,7 @@ class iecbase(specModelBase):
         IEC turbulence type                              =  {IECwindtype_desc}
         IEC standard                                     =  {IECstandard_desc}
         IEC Length scale (Lambda)                        =  {Lambda:0.4g} [m]
-        IEC Sigma                                        =  {Sigma:0.4g} [m/s]
+        IEC Sigma                                        =  {Sigma} [m/s]
         ETM 'c' value                                    =  {etmc}
         """
         data = dict(

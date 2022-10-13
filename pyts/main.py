@@ -728,21 +728,21 @@ class tsdata(gridProps):
         """
         if self.ews_update==False:
             self.ews()
-        return self.uturb[0] + self.uprof[0, :, :, None]
+        return self.uturb[0] + self.uprof[0, :, :]
 
     @property
     def v(self,):
         """
         The total (mean + turbulent), v-component of velocity.
         """
-        return self.uturb[1] + self.uprof[1, :, :, None]
+        return self.uturb[1] + self.uprof[1, :, :]
 
     @property
     def w(self,):
         """
         The total (mean + turbulent), w-component of velocity.
         """
-        return self.uturb[2] + self.uprof[2, :, :, None]
+        return self.uturb[2] + self.uprof[2, :, :]
 
     @property
     def UHUB(self,):
